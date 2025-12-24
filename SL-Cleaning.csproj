@@ -7,6 +7,26 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <Description>SL Cleaning - Software Manager</Description>
+    <Company>SL</Company>
+    <Product>SL Cleaning</Product>
+    <Version>1.0.0</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
+  </ItemGroup>
+
+  <!-- Copy PowerShell scripts to output directory -->
+  <ItemGroup>
+    <None Update="Scripts\*.ps1">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Ensure Scripts folder structure is preserved -->
+  <ItemGroup>
+    <Content Include="Scripts\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>

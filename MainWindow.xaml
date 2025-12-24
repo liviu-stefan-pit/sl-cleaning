@@ -3,10 +3,379 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:SL_Cleaning"
+        xmlns:vm="clr-namespace:SL_Cleaning.ViewModels"
+        xmlns:conv="clr-namespace:SL_Cleaning.Converters"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="SL Cleaning - Software Manager" 
+        Height="720" Width="1100"
+        MinHeight="500" MinWidth="800"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BackgroundGradientBrush}">
 
+    <Window.DataContext>
+        <vm:MainWindowViewModel/>
+    </Window.DataContext>
+
+    <!-- Window Resources for Converters -->
+    <Window.Resources>
+        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER BAR -->
+        <Border Grid.Row="0" 
+                Background="{StaticResource SurfaceBrush}" 
+                Padding="20,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="✦" 
+                               Foreground="{StaticResource AccentBrush}" 
+                               FontSize="{StaticResource FontSizeLarge}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,10,0"/>
+                    <TextBlock Text="SL Cleaning" 
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               FontSize="{StaticResource FontSizeTitle}"
+                               FontWeight="Light"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="Software Manager" 
+                               Foreground="{StaticResource TextMutedBrush}"
+                               FontSize="{StaticResource FontSizeMedium}"
+                               VerticalAlignment="Center"
+                               Margin="12,2,0,0"/>
+                </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="⚠ Disclaimer" 
+                        Style="{StaticResource BaseButtonStyle}"
+                        Command="{Binding ShowDisclaimerCommand}"
+                        ToolTip="View important disclaimer"
+                        Padding="12,8"
+                        FontSize="13"/>
+            </Grid>
+        </Border>
+
+        <!-- SEARCH / FILTER BAR -->
+        <Border Grid.Row="1" 
+                Background="{StaticResource SurfaceLightBrush}" 
+                Padding="20,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MaxWidth="400"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="0">
+                    <TextBox x:Name="SearchBox"
+                             Style="{StaticResource SearchTextBoxStyle}"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalAlignment="Center"/>
+                    <TextBlock Text="🔍 Search software..."
+                               Foreground="{StaticResource TextMutedBrush}"
+                               VerticalAlignment="Center"
+                               Margin="14,0,0,0"
+                               IsHitTestVisible="False"
+                               FontSize="{StaticResource FontSizeNormal}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <StackPanel Grid.Column="1" 
+                            Orientation="Horizontal" 
+                            Margin="20,0">
+                    <Button Content="Select All"
+                            Style="{StaticResource BaseButtonStyle}"
+                            Command="{Binding SelectAllCommand}"
+                            Padding="12,8"/>
+                    <Button Content="Select None"
+                            Style="{StaticResource BaseButtonStyle}"
+                            Command="{Binding SelectNoneCommand}"
+                            Padding="12,8"
+                            Margin="8,0,0,0"/>
+                </StackPanel>
+
+                <Grid Grid.Column="2"/>
+
+                <Button Grid.Column="3"
+                        Content="⟳ Refresh Scan"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Command="{Binding RefreshCommand}"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Padding="16,8"/>
+            </Grid>
+        </Border>
+
+        <!-- MAIN DATA GRID -->
+        <Border Grid.Row="2" 
+                Margin="20,16"
+                Background="{StaticResource SurfaceBrush}"
+                CornerRadius="6"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="1">
+            <Grid>
+                <Border Background="{StaticResource SurfaceBrush}"
+                        Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"
+                        Panel.ZIndex="10">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock Text="⏳" FontSize="32" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                        <TextBlock Text="{Binding StatusMessage}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="{StaticResource FontSizeMedium}"
+                                   HorizontalAlignment="Center"/>
+                        <ProgressBar Style="{StaticResource StarryProgressBarStyle}"
+                                     IsIndeterminate="True"
+                                     Width="200"
+                                     Margin="0,16,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <DataGrid x:Name="SoftwareGrid"
+                          Style="{StaticResource StarryDataGridStyle}"
+                          ItemsSource="{Binding SoftwareView}"
+                          ColumnHeaderStyle="{StaticResource StarryDataGridColumnHeaderStyle}"
+                          CellStyle="{StaticResource StarryDataGridCellStyle}"
+                          RowStyle="{StaticResource StarryDataGridRowStyle}"
+                          Visibility="{Binding IsBusy, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Width="50" CanUserResize="False">
+                            <DataGridTemplateColumn.Header>
+                                <CheckBox Style="{StaticResource StarryCheckBoxStyle}"
+                                          IsChecked="{Binding DataContext.IsAllSelected, RelativeSource={RelativeSource AncestorType=Window}, Mode=TwoWay}"
+                                          ToolTip="Select/Deselect All"/>
+                            </DataGridTemplateColumn.Header>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox Style="{StaticResource StarryCheckBoxStyle}"
+                                              IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                                              HorizontalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="NAME" 
+                                            Binding="{Binding DisplayName}" 
+                                            Width="*"
+                                            MinWidth="200"
+                                            IsReadOnly="True"/>
+
+                        <DataGridTextColumn Header="PUBLISHER" 
+                                            Binding="{Binding Publisher}" 
+                                            Width="180"
+                                            IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="VERSION" 
+                                            Binding="{Binding DisplayVersion}" 
+                                            Width="100"
+                                            IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="INSTALLED" 
+                                            Binding="{Binding InstallDateFormatted}" 
+                                            Width="100"
+                                            IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <DataGridTextColumn Header="SIZE" 
+                                            Binding="{Binding SizeFormatted}" 
+                                            Width="80"
+                                            IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="TextAlignment" Value="Right"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Border>
+
+        <!-- BOTTOM ACTION BAR -->
+        <Border Grid.Row="3" 
+                Background="{StaticResource SurfaceBrush}" 
+                Padding="20,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" 
+                            Orientation="Horizontal" 
+                            VerticalAlignment="Center">
+                    <TextBlock Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="{StaticResource FontSizeNormal}"
+                               VerticalAlignment="Center">
+                        <Run Text="Shown: "/>
+                        <Run Text="{Binding ShownCount, Mode=OneWay}" Foreground="{StaticResource TextPrimaryBrush}"/>
+                        <Run Text="  |  Selected: "/>
+                        <Run Text="{Binding SelectedCount, Mode=OneWay}" Foreground="{StaticResource AccentBrush}"/>
+                    </TextBlock>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" 
+                            Orientation="Horizontal" 
+                            VerticalAlignment="Center">
+                    <Button Content="Cancel"
+                            Style="{StaticResource BaseButtonStyle}"
+                            Command="{Binding CancelUninstallCommand}"
+                            Visibility="{Binding IsUninstalling, Converter={StaticResource BoolToVisibilityConverter}}"
+                            Padding="16,10"
+                            Margin="0,0,12,0"/>
+
+                    <Button Content="🗑 Uninstall Selected"
+                            Style="{StaticResource DangerButtonStyle}"
+                            Command="{Binding UninstallSelectedCommand}"
+                            IsEnabled="{Binding CanUninstall}"
+                            Padding="20,10"
+                            FontSize="{StaticResource FontSizeMedium}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- CONFIRMATION / PROGRESS OVERLAY -->
+        <Border Grid.RowSpan="4"
+                Background="#CC0D1421"
+                Visibility="{Binding IsOverlayVisible, Converter={StaticResource BoolToVisibilityConverter}}"
+                Panel.ZIndex="100">
+            <Border Background="{StaticResource SurfaceBrush}"
+                    CornerRadius="8"
+                    Padding="32"
+                    MaxWidth="500"
+                    MaxHeight="450"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="{Binding OverlayTitle}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               FontSize="{StaticResource FontSizeLarge}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,16"/>
+
+                    <StackPanel Grid.Row="1" Margin="0,0,0,20">
+                        <TextBlock Text="{Binding OverlayMessage}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="{StaticResource FontSizeNormal}"
+                                   TextWrapping="Wrap"/>
+
+                        <StackPanel Visibility="{Binding IsUninstalling, Converter={StaticResource BoolToVisibilityConverter}}"
+                                    Margin="0,20,0,0">
+                            <TextBlock Text="{Binding CurrentUninstallItem}"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       FontSize="{StaticResource FontSizeNormal}"
+                                       Margin="0,0,0,8"/>
+                            <ProgressBar Style="{StaticResource StarryProgressBarStyle}"
+                                         Value="{Binding UninstallProgress}"
+                                         Maximum="100"
+                                         Height="8"/>
+                            <TextBlock Text="{Binding UninstallProgressText}"
+                                       Foreground="{StaticResource TextMutedBrush}"
+                                       FontSize="{StaticResource FontSizeSmall}"
+                                       HorizontalAlignment="Right"
+                                       Margin="0,6,0,0"/>
+                        </StackPanel>
+
+                        <Expander Header="View Log"
+                                  Foreground="{StaticResource TextSecondaryBrush}"
+                                  Visibility="{Binding HasUninstallLog, Converter={StaticResource BoolToVisibilityConverter}}"
+                                  Margin="0,16,0,0">
+                            <ScrollViewer MaxHeight="150" 
+                                          VerticalScrollBarVisibility="Auto"
+                                          Margin="0,8,0,0">
+                                <TextBlock Text="{Binding UninstallLog}"
+                                           Foreground="{StaticResource TextMutedBrush}"
+                                           FontSize="{StaticResource FontSizeSmall}"
+                                           FontFamily="Consolas"
+                                           TextWrapping="Wrap"/>
+                            </ScrollViewer>
+                        </Expander>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2" 
+                                Orientation="Horizontal" 
+                                HorizontalAlignment="Right">
+                        <!-- Confirmation Mode Buttons -->
+                        <Button Content="Cancel"
+                                Style="{StaticResource BaseButtonStyle}"
+                                Command="{Binding CloseOverlayCommand}"
+                                Visibility="{Binding IsConfirmationMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                                Padding="16,10"
+                                Margin="0,0,12,0"/>
+                        <Button Content="Confirm Uninstall"
+                                Style="{StaticResource DangerButtonStyle}"
+                                Command="{Binding ConfirmUninstallCommand}"
+                                Visibility="{Binding IsConfirmationMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                                Padding="16,10"/>
+
+                        <!-- Result Mode Buttons -->
+                        <Button Content="Export Log"
+                                Style="{StaticResource BaseButtonStyle}"
+                                Command="{Binding ExportLogCommand}"
+                                Visibility="{Binding IsResultMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                                Padding="16,10"
+                                Margin="0,0,12,0"/>
+                        <Button Content="Close"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                Command="{Binding CloseOverlayCommand}"
+                                Visibility="{Binding IsResultMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                                Padding="16,10"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Border>
     </Grid>
 </Window>

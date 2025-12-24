@@ -18,8 +18,7 @@
 
     <!-- Window Resources for Converters -->
     <Window.Resources>
-        <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <conv:SourceFilterDisplayConverter x:Key="SourceFilterDisplayConverter"/>
         
         <!-- Override Window Style with Event Handlers -->
@@ -170,7 +169,7 @@
                 <Grid Grid.Column="0">
                     <TextBox x:Name="SearchBox"
                              Style="{StaticResource SearchTextBoxStyle}"
-                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Text="{Binding SearchText}"
                              VerticalAlignment="Center"/>
                     <TextBlock Text="🔍 Search software..."
                                Foreground="{StaticResource TextMutedBrush}"
@@ -260,7 +259,7 @@
                           ColumnHeaderStyle="{StaticResource StarryDataGridColumnHeaderStyle}"
                           CellStyle="{StaticResource StarryDataGridCellStyle}"
                           RowStyle="{StaticResource StarryDataGridRowStyle}"
-                          Visibility="{Binding IsBusy, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                          Visibility="{Binding IsNotBusy, Converter={StaticResource BoolToVisibilityConverter}}">
                     <DataGrid.Columns>
                         <DataGridTemplateColumn Width="50" CanUserResize="False">
                             <DataGridTemplateColumn.Header>

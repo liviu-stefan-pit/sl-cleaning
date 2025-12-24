@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 using System.Windows.Data;
-using SL_Cleaning.ViewModels;
+using SL_Cleaning.Models;
 
 namespace SL_Cleaning.Converters;
 

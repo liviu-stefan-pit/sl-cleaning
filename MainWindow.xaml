@@ -10,7 +10,7 @@
         Height="720" Width="1100"
         MinHeight="500" MinWidth="800"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource BackgroundGradientBrush}">
+        Style="{DynamicResource MainWindowStyle}">
 
     <Window.DataContext>
         <vm:MainWindowViewModel/>
@@ -21,51 +21,142 @@
         <conv:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
         <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter"/>
         <conv:SourceFilterDisplayConverter x:Key="SourceFilterDisplayConverter"/>
+        
+        <!-- Override Window Style with Event Handlers -->
+        <Style x:Key="MainWindowStyle" TargetType="Window">
+            <Setter Property="WindowStyle" Value="None"/>
+            <Setter Property="AllowsTransparency" Value="True"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="ResizeMode" Value="CanResizeWithGrip"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Window">
+                        <Border Background="{StaticResource BackgroundDarkBrush}"
+                                BorderBrush="{StaticResource BorderLightBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="40"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Custom Title Bar -->
+                                <Border Grid.Row="0"
+                                        Background="{StaticResource SurfaceBrush}"
+                                        CornerRadius="8,8,0,0"
+                                        BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="0,0,0,1"
+                                        MouseDown="TitleBar_MouseDown">
+                                    <Grid Margin="12,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- App Icon and Title -->
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <!-- Custom Vector Icon -->
+                                            <Viewbox Width="24" Height="24" Margin="0,0,12,0">
+                                                <Canvas Width="24" Height="24">
+                                                    <!-- Sparkle/Star Icon with Cleaning Theme -->
+                                                    <Path Fill="{StaticResource AccentBrush}">
+                                                        <Path.Data>
+                                                            <PathGeometry>
+                                                                <!-- Center star -->
+                                                                <PathFigure StartPoint="12,2">
+                                                                    <LineSegment Point="13.5,8"/>
+                                                                    <LineSegment Point="19,9"/>
+                                                                    <LineSegment Point="14.5,13"/>
+                                                                    <LineSegment Point="15.5,19"/>
+                                                                    <LineSegment Point="12,15"/>
+                                                                    <LineSegment Point="8.5,19"/>
+                                                                    <LineSegment Point="9.5,13"/>
+                                                                    <LineSegment Point="5,9"/>
+                                                                    <LineSegment Point="10.5,8"/>
+                                                                </PathFigure>
+                                                                <!-- Small accent stars -->
+                                                                <PathFigure StartPoint="20,4">
+                                                                    <LineSegment Point="20.5,5.5"/>
+                                                                    <LineSegment Point="22,6"/>
+                                                                    <LineSegment Point="20.5,6.5"/>
+                                                                    <LineSegment Point="20,8"/>
+                                                                    <LineSegment Point="19.5,6.5"/>
+                                                                    <LineSegment Point="18,6"/>
+                                                                    <LineSegment Point="19.5,5.5"/>
+                                                                </PathFigure>
+                                                                <PathFigure StartPoint="4,16">
+                                                                    <LineSegment Point="4.5,17.5"/>
+                                                                    <LineSegment Point="6,18"/>
+                                                                    <LineSegment Point="4.5,18.5"/>
+                                                                    <LineSegment Point="4,20"/>
+                                                                    <LineSegment Point="3.5,18.5"/>
+                                                                    <LineSegment Point="2,18"/>
+                                                                    <LineSegment Point="3.5,17.5"/>
+                                                                </PathFigure>
+                                                            </PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
+                                                    <!-- Cleaning brush accent -->
+                                                    <Path Stroke="{StaticResource AccentMutedBrush}" StrokeThickness="1.5">
+                                                        <Path.Data>
+                                                            <PathGeometry>
+                                                                <PathFigure StartPoint="16,15">
+                                                                    <LineSegment Point="21,20"/>
+                                                                </PathFigure>
+                                                            </PathGeometry>
+                                                        </Path.Data>
+                                                    </Path>
+                                                </Canvas>
+                                            </Viewbox>
+
+                                            <TextBlock Text="SL Cleaning"
+                                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+
+                                        <!-- Window Controls -->
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                            <Button Content="─"
+                                                    Style="{StaticResource TitleBarButtonStyle}"
+                                                    Click="MinimizeButton_Click"
+                                                    ToolTip="Minimize"/>
+                                            <Button Content="☐"
+                                                    Style="{StaticResource TitleBarButtonStyle}"
+                                                    Click="MaximizeButton_Click"
+                                                    ToolTip="Maximize"/>
+                                            <Button Content="✕"
+                                                    Style="{StaticResource TitleBarCloseButtonStyle}"
+                                                    Click="CloseButton_Click"
+                                                    ToolTip="Close"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Window Content -->
+                                <AdornerDecorator Grid.Row="1">
+                                    <ContentPresenter/>
+                                </AdornerDecorator>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="{StaticResource BackgroundGradientBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- HEADER BAR -->
-        <Border Grid.Row="0" 
-                Background="{StaticResource SurfaceBrush}" 
-                Padding="20,14">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="✦" 
-                               Foreground="{StaticResource AccentBrush}" 
-                               FontSize="{StaticResource FontSizeLarge}"
-                               VerticalAlignment="Center"
-                               Margin="0,0,10,0"/>
-                    <TextBlock Text="SL Cleaning" 
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               FontSize="{StaticResource FontSizeTitle}"
-                               FontWeight="Light"
-                               VerticalAlignment="Center"/>
-                </StackPanel>
-
-                <Button Grid.Column="1"
-                        Content="⚠ Disclaimer" 
-                        Style="{StaticResource BaseButtonStyle}"
-                        Command="{Binding ShowDisclaimerCommand}"
-                        ToolTip="View important disclaimer"
-                        Padding="12,8"
-                        FontSize="13"/>
-            </Grid>
-        </Border>
-
         <!-- SEARCH / FILTER BAR -->
-        <Border Grid.Row="1" 
+        <Border Grid.Row="0" 
                 Background="{StaticResource SurfaceLightBrush}" 
                 Padding="20,12">
             <Grid>
@@ -140,7 +231,7 @@
         </Border>
 
         <!-- MAIN DATA GRID -->
-        <Border Grid.Row="2" 
+        <Border Grid.Row="1" 
                 Margin="20,16"
                 Background="{StaticResource SurfaceBrush}"
                 CornerRadius="6"
@@ -269,7 +360,7 @@
         </Border>
 
         <!-- BOTTOM ACTION BAR -->
-        <Border Grid.Row="3" 
+        <Border Grid.Row="2" 
                 Background="{StaticResource SurfaceBrush}" 
                 Padding="20,14">
             <Grid>
@@ -294,6 +385,14 @@
                 <StackPanel Grid.Column="1" 
                             Orientation="Horizontal" 
                             VerticalAlignment="Center">
+                    <Button Content="⚠ Disclaimer" 
+                            Style="{StaticResource BaseButtonStyle}"
+                            Command="{Binding ShowDisclaimerCommand}"
+                            ToolTip="View important disclaimer"
+                            Padding="12,8"
+                            FontSize="13"
+                            Margin="0,0,12,0"/>
+                    
                     <Button Content="Cancel"
                             Style="{StaticResource BaseButtonStyle}"
                             Command="{Binding CancelUninstallCommand}"
@@ -312,7 +411,7 @@
         </Border>
 
         <!-- CONFIRMATION / PROGRESS OVERLAY -->
-        <Border Grid.RowSpan="4"
+        <Border Grid.RowSpan="3"
                 Background="#CC0D1421"
                 Visibility="{Binding IsOverlayVisible, Converter={StaticResource BoolToVisibilityConverter}}"
                 Panel.ZIndex="100"
@@ -421,7 +520,7 @@
         </Border>
 
         <!-- DISCLAIMER OVERLAY (Separate) -->
-        <Border Grid.RowSpan="4"
+        <Border Grid.RowSpan="3"
                 Background="#CC0D1421"
                 Visibility="{Binding IsDisclaimerMode, Converter={StaticResource BoolToVisibilityConverter}}"
                 Panel.ZIndex="100"

@@ -1,6 +1,7 @@
 using SL_Cleaning.Models;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -59,6 +60,8 @@ public sealed class UninstallService : IUninstallService
                 UninstallMethod.QuietUninstallString => await ExecuteQuietUninstallAsync(entry, stopwatch, cancellationToken),
                 UninstallMethod.MsiProductCode => await ExecuteMsiUninstallAsync(entry, stopwatch, cancellationToken),
                 UninstallMethod.UninstallString => await ExecuteStandardUninstallAsync(entry, stopwatch, cancellationToken),
+                UninstallMethod.AppxPackage => await ExecuteAppxUninstallAsync(entry, stopwatch, cancellationToken),
+                UninstallMethod.WindowsCapability => await ExecuteCapabilityUninstallAsync(entry, stopwatch, cancellationToken),
                 _ => UninstallResult.Failed(entry, "Unknown uninstall method.", method, stopwatch.Elapsed)
             };
         }
@@ -82,6 +85,54 @@ public sealed class UninstallService : IUninstallService
                 stopwatch.Elapsed,
                 -1);
         }
+    }
+
+    /// <summary>
+    /// Executes uninstall for Windows Store (AppX/MSIX) apps using PowerShell Remove-AppxPackage.
+    /// </summary>
+    private async Task<UninstallResult> ExecuteAppxUninstallAsync(
+        SoftwareEntry entry,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        var packageFullName = entry.PackageFullName!;
+        
+        // Use PowerShell to remove the AppX package
+        var command = $"powershell.exe -NoProfile -NonInteractive -Command \"Get-AppxPackage -AllUsers | Where-Object {{ $_.PackageFullName -eq '{packageFullName}' }} | Remove-AppxPackage -AllUsers\"";
+
+        var (exitCode, output, error) = await ExecuteCommandElevatedAsync(command, cancellationToken);
+
+        stopwatch.Stop();
+
+        var success = exitCode == 0;
+
+        return success
+            ? UninstallResult.Succeeded(entry, UninstallMethod.AppxPackage, stopwatch.Elapsed, exitCode)
+            : UninstallResult.Failed(entry, error ?? $"Exit code: {exitCode}", UninstallMethod.AppxPackage, stopwatch.Elapsed, exitCode);
+    }
+
+    /// <summary>
+    /// Executes uninstall for Windows Capabilities using PowerShell Remove-WindowsCapability.
+    /// </summary>
+    private async Task<UninstallResult> ExecuteCapabilityUninstallAsync(
+        SoftwareEntry entry,
+        Stopwatch stopwatch,
+        CancellationToken cancellationToken)
+    {
+        var capabilityName = entry.PackageFullName!;
+        
+        // Use PowerShell to remove the Windows Capability
+        var command = $"powershell.exe -NoProfile -NonInteractive -Command \"Remove-WindowsCapability -Online -Name '{capabilityName}'\"";
+
+        var (exitCode, output, error) = await ExecuteCommandElevatedAsync(command, cancellationToken);
+
+        stopwatch.Stop();
+
+        var success = exitCode == 0;
+
+        return success
+            ? UninstallResult.Succeeded(entry, UninstallMethod.WindowsCapability, stopwatch.Elapsed, exitCode)
+            : UninstallResult.Failed(entry, error ?? $"Exit code: {exitCode}", UninstallMethod.WindowsCapability, stopwatch.Elapsed, exitCode);
     }
 
     /// <summary>
@@ -134,7 +185,7 @@ public sealed class UninstallService : IUninstallService
 
     /// <summary>
     /// Executes standard UninstallString.
-    /// NOTE: This may show UI and require user interaction.
+    /// Uses shell execute with elevation for better compatibility.
     /// </summary>
     private async Task<UninstallResult> ExecuteStandardUninstallAsync(
         SoftwareEntry entry,
@@ -143,7 +194,7 @@ public sealed class UninstallService : IUninstallService
     {
         var command = entry.UninstallString!;
 
-        // Try to add silent flags if it looks like an msiexec command
+        // Try to add silent flags based on installer type
         if (command.Contains("msiexec", StringComparison.OrdinalIgnoreCase))
         {
             // Add quiet flags if not already present
@@ -152,8 +203,18 @@ public sealed class UninstallService : IUninstallService
                 command += " /qn /norestart";
             }
         }
+        else
+        {
+            // For non-MSI installers, append silent switches based on detected type
+            var silentSwitches = entry.GetSilentSwitches();
+            if (!string.IsNullOrEmpty(silentSwitches) && !HasAnySilentSwitch(command))
+            {
+                command += " " + silentSwitches;
+            }
+        }
 
-        var (exitCode, output, error) = await ExecuteCommandAsync(command, cancellationToken);
+        // Use elevated execution for better compatibility
+        var (exitCode, output, error) = await ExecuteCommandElevatedAsync(command, cancellationToken);
 
         stopwatch.Stop();
 
@@ -186,6 +247,75 @@ public sealed class UninstallService : IUninstallService
             StandardErrorEncoding = Encoding.UTF8
         };
 
+        return await RunProcessWithOutputAsync(startInfo, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes a command with elevation (Run as Administrator).
+    /// Note: Cannot capture output when using shell execute with elevation.
+    /// </summary>
+    private async Task<(int ExitCode, string? Output, string? Error)> ExecuteCommandElevatedAsync(
+        string command,
+        CancellationToken cancellationToken)
+    {
+        var (executable, arguments) = ParseCommand(command);
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = executable,
+            Arguments = arguments,
+            UseShellExecute = true,
+            Verb = "runas"  // Request elevation
+        };
+
+        using var process = new Process { StartInfo = startInfo };
+
+        try
+        {
+            process.Start();
+        }
+        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            // User cancelled UAC prompt
+            return (-1, null, "User cancelled the elevation request.");
+        }
+
+        // Wait with timeout and cancellation
+        using var timeoutCts = new CancellationTokenSource(UninstallTimeout);
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+        try
+        {
+            await process.WaitForExitAsync(linkedCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+                // Ignore kill errors
+            }
+
+            if (timeoutCts.IsCancellationRequested)
+            {
+                return (-1, null, "Uninstall operation timed out.");
+            }
+            throw;
+        }
+
+        return (process.ExitCode, null, null);
+    }
+
+    /// <summary>
+    /// Runs a process and captures its output.
+    /// </summary>
+    private async Task<(int ExitCode, string? Output, string? Error)> RunProcessWithOutputAsync(
+        ProcessStartInfo startInfo,
+        CancellationToken cancellationToken)
+    {
         using var process = new Process { StartInfo = startInfo };
         var outputBuilder = new StringBuilder();
         var errorBuilder = new StringBuilder();
@@ -233,6 +363,22 @@ public sealed class UninstallService : IUninstallService
         }
 
         return (process.ExitCode, outputBuilder.ToString(), errorBuilder.ToString());
+    }
+
+    /// <summary>
+    /// Checks if the command already contains common silent/quiet switches.
+    /// </summary>
+    private static bool HasAnySilentSwitch(string command)
+    {
+        var silentPatterns = new[]
+        {
+            "/S", "/s", "/silent", "/Silent", "/SILENT",
+            "/quiet", "/Quiet", "/QUIET", "/q",
+            "/VERYSILENT", "-silent", "-quiet",
+            "/SUPPRESSMSGBOXES", "/norestart"
+        };
+
+        return silentPatterns.Any(p => command.Contains(p, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

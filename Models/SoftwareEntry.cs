@@ -41,6 +41,11 @@ public partial class SoftwareEntry : ObservableObject
     public long? EstimatedSize { get; init; }
 
     /// <summary>
+    /// Whether this software can be uninstalled.
+    /// </summary>
+    public bool Uninstallable { get; init; }
+
+    /// <summary>
     /// Full uninstall command string.
     /// </summary>
     public string? UninstallString { get; init; }
@@ -59,6 +64,41 @@ public partial class SoftwareEntry : ObservableObject
     /// Registry key path where this entry was found.
     /// </summary>
     public string? RegistryPath { get; init; }
+
+    /// <summary>
+    /// Detected installer type (MSI, InnoSetup, NSIS, InstallShield, etc.)
+    /// </summary>
+    public string? InstallerType { get; init; }
+
+    /// <summary>
+    /// Whether this is a 64-bit application.
+    /// </summary>
+    public bool Is64Bit { get; init; }
+
+    /// <summary>
+    /// Install location path if available.
+    /// </summary>
+    public string? InstallLocation { get; init; }
+
+    /// <summary>
+    /// Path to modify/repair the installation.
+    /// </summary>
+    public string? ModifyPath { get; init; }
+
+    /// <summary>
+    /// Whether this was installed via Windows Installer (MSI).
+    /// </summary>
+    public bool WindowsInstaller { get; init; }
+
+    /// <summary>
+    /// Source of the software entry (Registry, WindowsStore, WindowsCapability).
+    /// </summary>
+    public string? Source { get; init; }
+
+    /// <summary>
+    /// Package full name for Windows Store apps (used for uninstall).
+    /// </summary>
+    public string? PackageFullName { get; init; }
 
     /// <summary>
     /// Whether this entry is selected for uninstall.
@@ -114,31 +154,48 @@ public partial class SoftwareEntry : ObservableObject
     }
 
     /// <summary>
-    /// Whether this entry can be uninstalled (has uninstall info).
-    /// </summary>
-    public bool CanUninstall =>
-        !string.IsNullOrWhiteSpace(UninstallString) ||
-        !string.IsNullOrWhiteSpace(QuietUninstallString) ||
-        !string.IsNullOrWhiteSpace(ProductCode);
-
-    /// <summary>
     /// Determines the best uninstall method available.
     /// </summary>
     public UninstallMethod PreferredUninstallMethod
     {
         get
         {
+            if (!Uninstallable)
+                return UninstallMethod.None;
+
+            // AppX/Store apps
+            if (Source == "AppX" && !string.IsNullOrWhiteSpace(PackageFullName))
+                return UninstallMethod.AppxPackage;
+
+            // QuietUninstallString is most reliable if available
             if (!string.IsNullOrWhiteSpace(QuietUninstallString))
                 return UninstallMethod.QuietUninstallString;
 
-            if (!string.IsNullOrWhiteSpace(ProductCode))
+            // MSI products can be silently uninstalled via msiexec
+            if (!string.IsNullOrWhiteSpace(ProductCode) || WindowsInstaller)
                 return UninstallMethod.MsiProductCode;
 
+            // Standard uninstall string as fallback
             if (!string.IsNullOrWhiteSpace(UninstallString))
                 return UninstallMethod.UninstallString;
 
             return UninstallMethod.None;
         }
+    }
+
+    /// <summary>
+    /// Gets the appropriate silent/quiet switches based on installer type.
+    /// </summary>
+    public string GetSilentSwitches()
+    {
+        return InstallerType switch
+        {
+            "MSI" => "/qn /norestart",
+            "InnoSetup" => "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART",
+            "NSIS" => "/S",
+            "InstallShield" => "-silent",
+            _ => "/S /silent /quiet /SILENT /VERYSILENT /norestart"
+        };
     }
 
     public override string ToString() => DisplayName;
@@ -152,5 +209,7 @@ public enum UninstallMethod
     None,
     UninstallString,
     QuietUninstallString,
-    MsiProductCode
+    MsiProductCode,
+    AppxPackage,
+    WindowsCapability
 }

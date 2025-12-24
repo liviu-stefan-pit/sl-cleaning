@@ -155,20 +155,28 @@ public sealed class PowerShellInventoryService : ISoftwareInventoryService
             foreach (var dto in entries)
             {
                 // Skip entries without a display name
-                if (string.IsNullOrWhiteSpace(dto.DisplayName))
+                if (string.IsNullOrWhiteSpace(dto.Name))
                     continue;
 
                 result.Add(new SoftwareEntry
                 {
-                    DisplayName = dto.DisplayName.Trim(),
+                    DisplayName = dto.Name!.Trim(),
                     Publisher = dto.Publisher?.Trim(),
-                    DisplayVersion = dto.DisplayVersion?.Trim(),
+                    DisplayVersion = dto.Version?.Trim(),
                     InstallDate = dto.InstallDate?.Trim(),
-                    EstimatedSize = dto.EstimatedSize,
-                    UninstallString = dto.UninstallString?.Trim(),
-                    QuietUninstallString = dto.QuietUninstallString?.Trim(),
+                    EstimatedSize = dto.Size,
+                    Uninstallable = dto.Uninstallable,
+                    UninstallString = dto.UninstallCommand?.Trim(),
+                    QuietUninstallString = dto.QuietUninstallCommand?.Trim(),
                     ProductCode = dto.ProductCode?.Trim(),
-                    RegistryPath = dto.RegistryPath?.Trim()
+                    RegistryPath = null,
+                    InstallerType = dto.UninstallMethod?.Trim(),
+                    Is64Bit = dto.Is64Bit,
+                    InstallLocation = dto.InstallLocation?.Trim(),
+                    ModifyPath = null,
+                    WindowsInstaller = dto.UninstallMethod == "MSI",
+                    Source = dto.Source?.Trim(),
+                    PackageFullName = dto.Source == "AppX" ? dto.UninstallCommand : null
                 });
             }
 
@@ -185,14 +193,18 @@ public sealed class PowerShellInventoryService : ISoftwareInventoryService
     /// </summary>
     private sealed class SoftwareEntryDto
     {
-        public string? DisplayName { get; set; }
+        public string? Source { get; set; }
+        public string? Name { get; set; }
         public string? Publisher { get; set; }
-        public string? DisplayVersion { get; set; }
+        public string? Version { get; set; }
         public string? InstallDate { get; set; }
-        public long? EstimatedSize { get; set; }
-        public string? UninstallString { get; set; }
-        public string? QuietUninstallString { get; set; }
+        public long? Size { get; set; }
+        public bool Uninstallable { get; set; }
+        public string? UninstallCommand { get; set; }
+        public string? QuietUninstallCommand { get; set; }
+        public string? UninstallMethod { get; set; }
         public string? ProductCode { get; set; }
-        public string? RegistryPath { get; set; }
+        public string? InstallLocation { get; set; }
+        public bool Is64Bit { get; set; }
     }
 }

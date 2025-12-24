@@ -58,7 +58,16 @@ public partial class MainWindowViewModel : ObservableObject
     private string _searchText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShownCount))]
+    private SourceFilterOption _selectedSourceFilter = SourceFilterOption.RegistryOnly;
+
+    [ObservableProperty]
     private bool? _isAllSelected = false;
+
+    /// <summary>
+    /// Available source filter options for the dropdown.
+    /// </summary>
+    public SourceFilterOption[] SourceFilterOptions { get; } = Enum.GetValues<SourceFilterOption>();
 
     // ─────────────────────────────────────────────────────────────────────────
     // Observable Properties - Overlay State
@@ -239,13 +248,24 @@ public partial class MainWindowViewModel : ObservableObject
                 var result = await _uninstallService.UninstallAsync(entry, _uninstallCts.Token);
                 results.Add(result);
 
-                // Update log
+                // Update log with detailed information
                 var status = result.Success ? "✓" : "✗";
                 UninstallLog += $"[{status}] {entry.DisplayName}\n";
+                UninstallLog += $"    Method: {result.MethodUsed}\n";
+                UninstallLog += $"    Exit Code: {result.ExitCode}\n";
+                UninstallLog += $"    Duration: {result.Duration.TotalSeconds:F1}s\n";
+                
                 if (!result.Success && !string.IsNullOrWhiteSpace(result.ErrorMessage))
                 {
                     UninstallLog += $"    Error: {result.ErrorMessage}\n";
                 }
+                
+                if (!string.IsNullOrWhiteSpace(result.StandardError))
+                {
+                    UninstallLog += $"    StdErr: {result.StandardError.Trim()}\n";
+                }
+                
+                UninstallLog += "\n";
             }
         }
         catch (OperationCanceledException)
@@ -266,10 +286,61 @@ public partial class MainWindowViewModel : ObservableObject
         _currentOverlayMode = OverlayMode.Result;
 
         OverlayTitle = batchResult.WasCancelled ? "Uninstall Cancelled" : "Uninstall Complete";
-        OverlayMessage = $"Processed: {batchResult.TotalCount}\n" +
-                         $"Successful: {batchResult.SuccessCount}\n" +
-                         $"Failed: {batchResult.FailureCount}\n" +
-                         $"Duration: {batchResult.TotalDuration:mm\\:ss}";
+        
+        // Build detailed message with failure information
+        var messageParts = new System.Text.StringBuilder();
+        messageParts.AppendLine($"Processed: {batchResult.TotalCount}");
+        messageParts.AppendLine($"Successful: {batchResult.SuccessCount}");
+        messageParts.AppendLine($"Failed: {batchResult.FailureCount}");
+        messageParts.AppendLine($"Duration: {batchResult.TotalDuration:mm\\:ss}");
+        
+        // Show failure details if any failed
+        var failures = results.Where(r => !r.Success).ToList();
+        if (failures.Count > 0)
+        {
+            messageParts.AppendLine();
+            messageParts.AppendLine("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            messageParts.AppendLine("FAILED ITEMS:");
+            messageParts.AppendLine();
+            
+            foreach (var failure in failures.Take(5)) // Show up to 5 failures
+            {
+                messageParts.AppendLine($"✗ {failure.Entry.DisplayName}");
+                
+                if (!string.IsNullOrWhiteSpace(failure.ErrorMessage))
+                {
+                    var errorMsg = failure.ErrorMessage.Length > 80 
+                        ? failure.ErrorMessage.Substring(0, 77) + "..." 
+                        : failure.ErrorMessage;
+                    messageParts.AppendLine($"  └─ {errorMsg}");
+                }
+                else
+                {
+                    messageParts.AppendLine($"  └─ Exit code: {failure.ExitCode}");
+                }
+                messageParts.AppendLine();
+            }
+            
+            if (failures.Count > 5)
+            {
+                messageParts.AppendLine($"... and {failures.Count - 5} more failures");
+                messageParts.AppendLine("See full log for complete details.");
+            }
+        }
+        else if (batchResult.SuccessCount > 0)
+        {
+            messageParts.AppendLine();
+            messageParts.AppendLine("✓ All items uninstalled successfully!");
+        }
+        
+        if (!batchResult.WasCancelled && batchResult.TotalCount > 0)
+        {
+            messageParts.AppendLine();
+            messageParts.AppendLine("⚠ Note: Some software may report success");
+            messageParts.AppendLine("but remain installed. Refresh to verify.");
+        }
+        
+        OverlayMessage = messageParts.ToString();
 
         OnPropertyChanged(nameof(IsConfirmationMode));
         OnPropertyChanged(nameof(IsResultMode));
@@ -396,6 +467,19 @@ public partial class MainWindowViewModel : ObservableObject
         if (obj is not SoftwareEntry entry)
             return false;
 
+        // Apply source filter
+        var passesSourceFilter = SelectedSourceFilter switch
+        {
+            SourceFilterOption.RegistryOnly => entry.Source == "Registry",
+            SourceFilterOption.WindowsStoreOnly => entry.Source == "AppX",
+            SourceFilterOption.All => true,
+            _ => true
+        };
+
+        if (!passesSourceFilter)
+            return false;
+
+        // Apply search text filter
         if (string.IsNullOrWhiteSpace(SearchText))
             return true;
 
@@ -450,6 +534,12 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    partial void OnSelectedSourceFilterChanged(SourceFilterOption value)
+    {
+        SoftwareView.Refresh();
+        UpdateCounts();
+    }
+
     private enum OverlayMode
     {
         None,
@@ -458,4 +548,25 @@ public partial class MainWindowViewModel : ObservableObject
         Result,
         Disclaimer
     }
+}
+
+/// <summary>
+/// Filter options for software source.
+/// </summary>
+public enum SourceFilterOption
+{
+    /// <summary>
+    /// Show only registry-based installed programs.
+    /// </summary>
+    RegistryOnly,
+
+    /// <summary>
+    /// Show only Windows Store (AppX/MSIX) apps.
+    /// </summary>
+    WindowsStoreOnly,
+
+    /// <summary>
+    /// Show all installed software from all sources.
+    /// </summary>
+    All
 }

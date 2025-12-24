@@ -10,6 +10,8 @@
         Height="720" Width="1100"
         MinHeight="500" MinWidth="800"
         WindowStartupLocation="CenterScreen"
+    UseLayoutRounding="True"
+    SnapsToDevicePixels="True"
         Style="{DynamicResource MainWindowStyle}">
 
     <Window.DataContext>
@@ -273,6 +275,37 @@
                                               IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
                                               IsEnabled="{Binding Uninstallable}"
                                               HorizontalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Icon Column -->
+                        <DataGridTemplateColumn Width="Auto"
+                                                MinWidth="{StaticResource IconCellMinWidth}"
+                                                CanUserResize="False">
+                            <DataGridTemplateColumn.Header>
+                                <TextBlock Text="📦" ToolTip="Program Icon" HorizontalAlignment="Center"/>
+                            </DataGridTemplateColumn.Header>
+                            <DataGridTemplateColumn.CellStyle>
+                                <Style TargetType="DataGridCell" BasedOn="{StaticResource StarryDataGridCellStyle}">
+                                    <Setter Property="Padding" Value="{StaticResource IconCellPadding}"/>
+                                </Style>
+                            </DataGridTemplateColumn.CellStyle>
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <Border CornerRadius="{StaticResource IconCornerRadius}"
+                                                Background="Transparent">
+                                            <Viewbox Stretch="Uniform"
+                                                     MaxWidth="{StaticResource IconVisualMaxDimension}"
+                                                     MaxHeight="{StaticResource IconVisualMaxDimension}">
+                                                <Image Source="{Binding IconSource}"
+                                                       Stretch="Uniform"
+                                                       RenderOptions.BitmapScalingMode="HighQuality"
+                                                       SnapsToDevicePixels="True"/>
+                                            </Viewbox>
+                                        </Border>
+                                    </Grid>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>

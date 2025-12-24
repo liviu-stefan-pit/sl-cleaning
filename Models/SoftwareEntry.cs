@@ -101,10 +101,21 @@ public partial class SoftwareEntry : ObservableObject
     public string? PackageFullName { get; init; }
 
     /// <summary>
+    /// Path to the icon file (EXE, ICO, or DLL with resource index).
+    /// </summary>
+    public string? DisplayIcon { get; init; }
+
+    /// <summary>
     /// Whether this entry is selected for uninstall.
     /// </summary>
     [ObservableProperty]
     private bool _isSelected;
+
+    /// <summary>
+    /// Icon image source for display (loaded on-demand).
+    /// </summary>
+    [ObservableProperty]
+    private System.Windows.Media.ImageSource? _iconSource;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Computed Display Properties

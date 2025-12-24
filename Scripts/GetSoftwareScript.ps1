@@ -52,6 +52,9 @@ function Get-RegistryPrograms {
                 "None"
             }
             
+            # Extract icon path from DisplayIcon registry value
+            $displayIcon = if ($props.DisplayIcon) { $props.DisplayIcon.Trim() } else { $null }
+            
             $results += [PSCustomObject]@{
                 Source = "Registry"
                 Name = $displayName.Trim()
@@ -65,6 +68,7 @@ function Get-RegistryPrograms {
                 UninstallMethod = $uninstallMethod
                 ProductCode = if ($key.PSChildName -match '^\{[0-9A-Fa-f-]{36}\}$') { $key.PSChildName } else { $null }
                 InstallLocation = if ($props.InstallLocation) { $props.InstallLocation.Trim() } else { $null }
+                DisplayIcon = $displayIcon
                 Is64Bit = $regPath.Is64Bit
             }
         }
@@ -216,6 +220,44 @@ function Get-StoreApps {
                 }
             }
             
+            # Try to build a shell reference that can resolve the icon without direct file access
+            $displayIcon = $null
+            $appId = $null
+
+            try {
+                if ($manifest -and $manifest.Package.Applications.Application) {
+                    $appElement = $manifest.Package.Applications.Application
+                    if ($appElement -is [System.Array]) {
+                        $appElement = $appElement | Select-Object -First 1
+                    }
+
+                    if ($appElement.Id) {
+                        $appId = $appElement.Id
+                    }
+                }
+            } catch { }
+
+            if ($appId) {
+                $displayIcon = "shell:AppsFolder\$($pkg.PackageFamilyName)!$appId"
+            }
+
+            if (-not $displayIcon) {
+                try {
+                    if ($pkg.InstallLocation -and (Test-Path $pkg.InstallLocation)) {
+                        $logoPath = Join-Path $pkg.InstallLocation "Assets"
+                        if (Test-Path $logoPath) {
+                            # Look for common logo files
+                            $logoFiles = Get-ChildItem -Path $logoPath -Filter "*.png" -ErrorAction SilentlyContinue |
+                                Where-Object { $_.Name -match '(Square|Logo|Icon).*\.png$' } |
+                                Select-Object -First 1
+                            if ($logoFiles) {
+                                $displayIcon = $logoFiles.FullName
+                            }
+                        }
+                    }
+                } catch { }
+            }
+            
             $results += [PSCustomObject]@{
                 Source = "AppX"
                 Name = $displayName.Trim()
@@ -229,6 +271,7 @@ function Get-StoreApps {
                 UninstallMethod = if ($isUninstallable) { "AppX" } else { "None" }
                 ProductCode = $null
                 InstallLocation = if ($pkg.InstallLocation) { $pkg.InstallLocation.Trim() } else { $null }
+                DisplayIcon = $displayIcon
                 Is64Bit = $pkg.Architecture -eq 'X64'
             }
         }

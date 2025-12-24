@@ -439,7 +439,14 @@ public partial class MainWindowViewModel : ObservableObject
             {
                 // Subscribe to property changes for selection tracking
                 entry.PropertyChanged += Entry_PropertyChanged;
+                entry.IconSource = IconExtractor.GetDefaultIcon();
                 Software.Add(entry);
+                
+                // Load icon asynchronously in background
+                if (!string.IsNullOrWhiteSpace(entry.DisplayIcon))
+                {
+                    _ = Task.Run(() => LoadIconForEntry(entry));
+                }
             }
 
             StatusMessage = $"Found {Software.Count} installed applications";
@@ -452,6 +459,39 @@ public partial class MainWindowViewModel : ObservableObject
         {
             IsBusy = false;
             UpdateCounts();
+        }
+    }
+
+    /// <summary>
+    /// Loads the icon for a software entry asynchronously.
+    /// </summary>
+    private void LoadIconForEntry(SoftwareEntry entry)
+    {
+        try
+        {
+            System.Windows.Media.ImageSource? resolvedIcon = null;
+
+            foreach (var candidate in IconPathResolver.GetCandidates(entry))
+            {
+                var found = IconExtractor.TryGetIcon(candidate, out var icon);
+                resolvedIcon = icon;
+
+                if (found)
+                {
+                    break;
+                }
+            }
+
+            resolvedIcon ??= IconExtractor.GetDefaultIcon();
+
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                entry.IconSource = resolvedIcon;
+            });
+        }
+        catch
+        {
+            // Silently fail if icon extraction doesn't work
         }
     }
 

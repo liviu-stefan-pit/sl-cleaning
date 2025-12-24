@@ -180,7 +180,8 @@ public sealed class PowerShellInventoryService : ISoftwareInventoryService
                     ModifyPath = null,
                     WindowsInstaller = dto.UninstallMethod == "MSI",
                     Source = dto.Source?.Trim(),
-                    PackageFullName = dto.Source == "AppX" ? dto.UninstallCommand : null
+                    PackageFullName = dto.Source == "AppX" ? dto.UninstallCommand : null,
+                    DisplayIcon = dto.DisplayIcon?.Trim()
                 });
             }
 
@@ -209,6 +210,7 @@ public sealed class PowerShellInventoryService : ISoftwareInventoryService
         public string? UninstallMethod { get; set; }
         public string? ProductCode { get; set; }
         public string? InstallLocation { get; set; }
+        public string? DisplayIcon { get; set; }
         public bool Is64Bit { get; set; }
     }
 }

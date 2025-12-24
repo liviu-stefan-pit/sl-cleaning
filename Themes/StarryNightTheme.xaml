@@ -68,6 +68,11 @@
     <System:Double x:Key="FontSizeMedium" xmlns:System="clr-namespace:System;assembly=mscorlib">15</System:Double>
     <System:Double x:Key="FontSizeLarge" xmlns:System="clr-namespace:System;assembly=mscorlib">18</System:Double>
     <System:Double x:Key="FontSizeTitle" xmlns:System="clr-namespace:System;assembly=mscorlib">22</System:Double>
+    <System:Double x:Key="IconRowMinHeight" xmlns:System="clr-namespace:System;assembly=mscorlib">44</System:Double>
+    <System:Double x:Key="IconCellMinWidth" xmlns:System="clr-namespace:System;assembly=mscorlib">60</System:Double>
+    <System:Double x:Key="IconVisualMaxDimension" xmlns:System="clr-namespace:System;assembly=mscorlib">40</System:Double>
+    <Thickness x:Key="IconCellPadding">6</Thickness>
+    <CornerRadius x:Key="IconCornerRadius">6</CornerRadius>
 
     <!-- ═══════════════════════════════════════════════════════════════════════
          CONTROL STYLES
@@ -309,6 +314,7 @@
 
     <Style x:Key="StarryDataGridRowStyle" TargetType="DataGridRow">
         <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="MinHeight" Value="{StaticResource IconRowMinHeight}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">

@@ -52,11 +52,6 @@
                                FontSize="{StaticResource FontSizeTitle}"
                                FontWeight="Light"
                                VerticalAlignment="Center"/>
-                    <TextBlock Text="Software Manager" 
-                               Foreground="{StaticResource TextMutedBrush}"
-                               FontSize="{StaticResource FontSizeMedium}"
-                               VerticalAlignment="Center"
-                               Margin="12,2,0,0"/>
                 </StackPanel>
 
                 <Button Grid.Column="1"
@@ -320,7 +315,8 @@
         <Border Grid.RowSpan="4"
                 Background="#CC0D1421"
                 Visibility="{Binding IsOverlayVisible, Converter={StaticResource BoolToVisibilityConverter}}"
-                Panel.ZIndex="100">
+                Panel.ZIndex="100"
+                MouseDown="Overlay_MouseDown">
             <Border Background="{StaticResource SurfaceBrush}"
                     CornerRadius="8"
                     Padding="32"
@@ -329,7 +325,8 @@
                     VerticalAlignment="Center"
                     HorizontalAlignment="Center"
                     BorderBrush="{StaticResource BorderBrush}"
-                    BorderThickness="1">
+                    BorderThickness="1"
+                    MouseDown="OverlayContent_MouseDown">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -419,6 +416,60 @@
                                 Visibility="{Binding IsResultMode, Converter={StaticResource BoolToVisibilityConverter}}"
                                 Padding="16,10"/>
                     </StackPanel>
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- DISCLAIMER OVERLAY (Separate) -->
+        <Border Grid.RowSpan="4"
+                Background="#CC0D1421"
+                Visibility="{Binding IsDisclaimerMode, Converter={StaticResource BoolToVisibilityConverter}}"
+                Panel.ZIndex="100"
+                MouseDown="DisclaimerOverlay_MouseDown">
+            <Border Background="{StaticResource SurfaceBrush}"
+                    CornerRadius="8"
+                    Padding="32"
+                    MaxWidth="600"
+                    MaxHeight="500"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1"
+                    MouseDown="OverlayContent_MouseDown">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="{Binding OverlayTitle}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               FontSize="{StaticResource FontSizeLarge}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,16"/>
+
+                    <ScrollViewer Grid.Row="1" 
+                                  MaxHeight="350" 
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  Margin="0,0,0,20">
+                        <TextBlock Text="{Binding OverlayMessage}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="{StaticResource FontSizeNormal}"
+                                   TextWrapping="Wrap"
+                                   LineHeight="22"
+                                   Padding="0,0,10,0"/>
+                    </ScrollViewer>
+
+                    <Button Grid.Row="2"
+                            Content="OK, I Understand"
+                            Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding CloseOverlayCommand}"
+                            HorizontalAlignment="Center"
+                            Padding="32,10"
+                            MinWidth="160"/>
                 </Grid>
             </Border>
         </Border>

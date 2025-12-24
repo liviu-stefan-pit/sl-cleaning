@@ -58,5 +58,32 @@ namespace SL_Cleaning
                 }
             }
         }
+
+        private void Overlay_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            // Close overlay when clicking on the background (outside the dialog)
+            if (DataContext is MainWindowViewModel viewModel && 
+                viewModel.IsOverlayVisible &&
+                !viewModel.IsUninstalling) // Don't allow closing during uninstall
+            {
+                viewModel.CloseOverlayCommand.Execute(null);
+            }
+        }
+
+        private void DisclaimerOverlay_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            // Close disclaimer when clicking on the background
+            if (DataContext is MainWindowViewModel viewModel && 
+                viewModel.IsDisclaimerMode)
+            {
+                viewModel.CloseOverlayCommand.Execute(null);
+            }
+        }
+
+        private void OverlayContent_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            // Prevent click from bubbling up to the overlay background
+            e.Handled = true;
+        }
     }
 }

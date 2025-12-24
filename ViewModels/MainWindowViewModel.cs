@@ -369,6 +369,7 @@ public partial class MainWindowViewModel : ObservableObject
         _currentOverlayMode = OverlayMode.None;
         OnPropertyChanged(nameof(IsConfirmationMode));
         OnPropertyChanged(nameof(IsResultMode));
+        OnPropertyChanged(nameof(IsDisclaimerMode));
     }
 
     [RelayCommand]

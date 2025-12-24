@@ -158,6 +158,10 @@ public sealed class PowerShellInventoryService : ISoftwareInventoryService
                 if (string.IsNullOrWhiteSpace(dto.Name))
                     continue;
 
+                // Skip entries that are not uninstallable
+                if (!dto.Uninstallable)
+                    continue;
+
                 result.Add(new SoftwareEntry
                 {
                     DisplayName = dto.Name!.Trim(),

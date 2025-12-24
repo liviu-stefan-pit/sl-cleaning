@@ -180,6 +180,14 @@ public partial class MainWindowViewModel : ObservableObject
         UpdateCounts();
     }
 
+    [RelayCommand]
+    private void ToggleSelection(SoftwareEntry? entry)
+    {
+        if (entry == null) return;
+        entry.IsSelected = !entry.IsSelected;
+        UpdateCounts();
+    }
+
     [RelayCommand(CanExecute = nameof(CanUninstall))]
     private void UninstallSelected()
     {
